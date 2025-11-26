@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Reportes - ReciLink</title>
+<link rel="stylesheet" href="styles.css">
+<script src="db.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="header">
+    <img src="img/Gemini_Generated_Image_5849qp5849qp5849.png" alt="logo" onerror="this.style.display='none'">
+    <h1>Reportes de Reciclaje</h1>
+</div>
+
+<div class="container">
+
+    <!-- FILTROS -->
+    <div class="card">
+        <h3>Generar reporte</h3>
+
+        <label>Tipo de reporte</label>
+        <select id="tipoReporte">
+            <option value="dia">Día actual</option>
+            <option value="semana">Semana actual</option>
+            <option value="mes">Mes actual</option>
+            <option value="rango">Rango personalizado</option>
+        </select>
+
+        <div id="rangoFechas" style="display:none;">
+            <label>Desde</label>
+            <input type="date" id="fechaInicio">
+            <label>Hasta</label>
+            <input type="date" id="fechaFin">
+        </div>
+
+        <button onclick="generarReporte()">Generar</button>
+        <p id="msg" class="small" style="color:#c0392b;"></p>
+    </div>
+
+    <!-- RESULTADOS -->
+    <div class="card">
+        <h3>Resultados</h3>
+        <p id="resumen" class="small"></p>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Material</th>
+                    <th>Kilos</th>
+                    <th>Total $</th>
+                    <th>Fecha</th>
+                    <th>Nota</th>
+                </tr>
+            </thead>
+            <tbody id="tablaReporte"></tbody>
+        </table>
+    </div>
+
+    <!-- GRAFICA -->
+    <div class="card">
+        <h3>Gráfica (kg por material)</h3>
+        <canvas id="graf"></canvas>
+    </div>
+
+    <button onclick="location.href='admin.html'">Volver</button>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // mostrar selector de rango si elige "rango"
+    document.getElementById("tipoReporte").addEventListener("change", () => {
+        const tipo = document.getElementById("tipoReporte").value;
+        document.getElementById("rangoFechas").style.display =
+            (tipo === "rango" ? "block" : "none");
+    });
+});
+
+function generarReporte() {
+    const tipo = document.getElementById("tipoReporte").value;
+    const msg = document.getElementById("msg");
+    msg.innerText = "";
+
+    ReciLinkDB.listarRegistros().then(regs => {
+        let filtrados = [];
+
+        const hoy = new Date();
+        const inicioSemana = new Date(hoy);
+        inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+
+        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+        if (tipo === "dia") {
+            const hoyStr = hoy.toISOString().split("T")[0];
+            filtrados = regs.filter(r => r.fecha.startsWith(hoyStr));
+        }
+        else if (tipo === "semana") {
+            filtrados = regs.filter(r => new Date(r.fecha) >= inicioSemana);
+        }
+        else if (tipo === "mes") {
+            filtrados = regs.filter(r => new Date(r.fecha) >= inicioMes);
+        }
+        else if (tipo === "rango") {
+            const fi = document.getElementById("fechaInicio").value;
+            const ff = document.getElementById("fechaFin").value;
+            if (!fi || !ff) {
+                msg.innerText = "Selecciona ambas fechas.";
+                return;
+            }
+            const d1 = new Date(fi);
+            const d2 = new Date(ff);
+            filtrados = regs.filter(r => {
+                const fr = new Date(r.fecha);
+                return fr >= d1 && fr <= d2;
+            });
+        }
+
+        mostrarResultados(filtrados);
+    });
+}
+
+function mostrarResultados(lista) {
+    const tbody = document.getElementById("tablaReporte");
+    tbody.innerHTML = "";
+
+    let totalKg = 0, totalDinero = 0;
+    let tot = { PET:0, Aluminio:0, Carton:0 };
+
+    lista.forEach(r => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${r.id}</td>
+                <td>${r.material}</td>
+                <td>${r.kilos}</td>
+                <td>${r.total}</td>
+                <td>${new Date(r.fecha).toLocaleString()}</td>
+                <td>${r.nota || ""}</td>
+            </tr>
+        `;
+        totalKg += Number(r.kilos);
+        totalDinero += Number(r.total);
+        tot[r.material] += Number(r.kilos);
+    });
+
+    document.getElementById("resumen").innerText =
+        `Registros: ${lista.length} — Total Kg: ${totalKg.toFixed(2)} kg — Total pagado: $${totalDinero.toFixed(2)}`;
+
+    actualizarGrafica(tot);
+}
+
+function actualizarGrafica(tot) {
+    const ctx = document.getElementById("graf");
+    if (window._grafReport) window._grafReport.destroy();
+
+    window._grafReport = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["PET", "Aluminio", "Carton"],
+            datasets: [{
+                label: "Kg reciclados",
+                data: [tot.PET, tot.Aluminio, tot.Carton]
+            }]
+        }
+    });
+}
+</script>
+
+</body>
+</html>

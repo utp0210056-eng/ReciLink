@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Gestionar Precios - ReciLink</title>
+<link rel="stylesheet" href="styles.css">
+<script src="db.js"></script>
+</head>
+<body>
+  <div class="header">
+    <img src="img/Gemini_Generated_Image_5849qp5849qp5849.png" alt="logo" onerror="this.style.display='none'">
+    <h1>Gestión de Precios</h1>
+  </div>
+
+  <div class="container">
+    <div class="card row">
+      <div class="col">
+        <h3>Precios actuales</h3>
+        <ul id="preciosList" class="small"></ul>
+      </div>
+
+      <div class="col">
+        <h3>Cambiar precio</h3>
+        <label>Material</label>
+        <select id="matCambio">
+          <option>PET</option>
+          <option>Aluminio</option>
+          <option>Carton</option>
+        </select>
+        <label>Nuevo precio (>= 1)</label>
+        <input id="nuevoPrecio" type="number" step="0.01" placeholder="Ej: 4.50">
+        <button onclick="guardarCambio()">Guardar cambio</button>
+        <p id="msg" class="small" style="color:#c0392b;"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Historial de precios</h3>
+      <table class="table">
+        <thead><tr><th>ID</th><th>Material</th><th>Precio anterior</th><th>Precio actual</th><th>Fecha</th></tr></thead>
+        <tbody id="historialBody"></tbody>
+      </table>
+    </div>
+
+    <button onclick="volver()">Volver al panel</button>
+  </div>
+
+<script>
+if (!localStorage.getItem("adminUser")) { alert("Debes iniciar sesión"); window.location="index.html"; }
+
+function cargarTodo(){
+  ReciLinkDB.listarPrecios().then(list => {
+    const ul = document.getElementById("preciosList");
+    ul.innerHTML = "";
+    list.forEach(p => ul.innerHTML += `<li>${p.material}: $${Number(p.precioActual).toFixed(2)} /kg (actualizado: ${new Date(p.fechaActualizacion).toLocaleString()})</li>`);
+  }).catch(e => console.error(e));
+
+  ReciLinkDB.listarHistorialPrecios().then(list => {
+    const tbody = document.getElementById("historialBody");
+    tbody.innerHTML = "";
+    list.sort((a,b)=> new Date(b.fechaCambio) - new Date(a.fechaCambio));
+    list.forEach(r => {
+      tbody.innerHTML += `<tr>
+        <td>${r.id}</td>
+        <td>${r.material}</td>
+        <td>${r.precioAnterior}</td>
+        <td>${r.precioActual}</td>
+        <td>${new Date(r.fechaCambio).toLocaleString()}</td>
+      </tr>`;
+    });
+  }).catch(e => console.error(e));
+}
+
+function guardarCambio(){
+  const mat = document.getElementById("matCambio").value;
+  const nuevo = Number(document.getElementById("nuevoPrecio").value);
+  const msg = document.getElementById("msg");
+  msg.innerText = "";
+  ReciLinkDB.openDB().then(()=> ReciLinkDB.cambiarPrecio(mat, nuevo)).then(()=> {
+    msg.innerText = "Precio actualizado correctamente.";
+    document.getElementById("nuevoPrecio").value = "";
+    cargarTodo();
+  }).catch(e => { msg.innerText = "Error: " + e; });
+}
+
+function volver(){ window.location = "admin.html"; }
+
+document.addEventListener('DOMContentLoaded', ()=> { ReciLinkDB.openDB().then(cargarTodo).catch(e => console.error(e));});
+</script>
+</body>
+</html>

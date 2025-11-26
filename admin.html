@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Admin - ReciLink</title>
+<link rel="stylesheet" href="styles.css">
+<script src="db.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="header">
+  <img src="img/Gemini_Generated_Image_5849qp5849qp5849.png" alt="logo" onerror="this.style.display='none'">
+  <h1>Panel Administrador - ReciLink</h1>
+</div>
+
+<div class="container">
+  <div class="card row">
+    <div class="col">
+      <h3>Registrar llegada de material</h3>
+      <label>Material</label>
+      <select id="matSelect">
+        <option>PET</option>
+        <option>Aluminio</option>
+        <option>Carton</option>
+      </select>
+      <label>Kilos</label>
+      <input id="kilosInput" type="number" step="0.1" placeholder="Ej: 2.5">
+      <label>Nota (opcional)</label>
+      <input id="notaInput" placeholder="Observaciones">
+      <button onclick="registrarLlegada()">Registrar</button>
+      <p id="msgReg" class="small" style="color:#c0392b;"></p>
+    </div>
+
+    <div class="col">
+      <h3>Acciones</h3>
+      <button onclick="location.href='precios.html'">Gestionar Precios</button>
+
+      <button onclick="location.href='reportes.html'">Ver Reportes</button>
+
+
+      <button onclick="downloadCSV()">Exportar CSV</button>
+      <button onclick="vaciarDatosPrueba()" class="small">Borrar todos (prueba)</button>
+      <p class="small">Precios actuales:</p>
+      <ul id="listaPrecios" class="small"></ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Historial de compras</h3>
+    <table class="table">
+      <thead><tr><th>ID</th><th>Material</th><th>Kilos</th><th>Precio/kg</th><th>Total</th><th>Fecha</th><th>Nota</th><th>Acción</th></tr></thead>
+      <tbody id="tbodyReg"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Estadísticas</h3>
+    <p id="stats" class="small"></p>
+    <canvas id="chartAdmin"></canvas>
+  </div>
+
+  <button onclick="cerrarSesion()">Cerrar sesión</button>
+</div>
+
+<script>
+if (!localStorage.getItem("adminUser")) { alert("Debes iniciar sesión"); window.location="index.html"; }
+
+document.addEventListener('DOMContentLoaded', ()=> {
+  ReciLinkDB.openDB().then(()=> {
+    cargarPrecios();
+    cargarRegistros();
+    cargarStats();
+  }).catch(e => console.error(e));
+});
+
+function registrarLlegada(){
+  const mat = document.getElementById("matSelect").value;
+  const kilos = document.getElementById("kilosInput").value;
+  const nota = document.getElementById("notaInput").value;
+  const msg = document.getElementById("msgReg");
+  msg.innerText = "";
+  ReciLinkDB.registrarReciclaje(mat, kilos, nota).then(r => {
+    msg.innerText = "Registrado (id " + r.id + ") — total $ " + r.total;
+    document.getElementById("kilosInput").value = "";
+    document.getElementById("notaInput").value = "";
+    cargarRegistros();
+    cargarStats();
+  }).catch(e => { msg.innerText = "Error: " + e; });
+}
+
+function cargarPrecios(){
+  ReciLinkDB.listarPrecios().then(list => {
+    const ul = document.getElementById("listaPrecios");
+    ul.innerHTML = "";
+    list.forEach(p => ul.innerHTML += `<li>${p.material}: $${Number(p.precioActual).toFixed(2)} /kg (ult: ${new Date(p.fechaActualizacion).toLocaleString()})</li>`);
+  }).catch(e => console.error(e));
+}
+
+function cargarRegistros(){
+  ReciLinkDB.listarRegistros().then(list => {
+    const tbody = document.getElementById("tbodyReg");
+    tbody.innerHTML = "";
+    list.sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
+    list.forEach(r => {
+      tbody.innerHTML += `<tr>
+        <td>${r.id}</td><td>${r.material}</td><td>${r.kilos}</td><td>${r.precioPorKg}</td><td>${r.total}</td><td>${new Date(r.fecha).toLocaleString()}</td><td>${r.nota||''}</td>
+        <td><button class="small" onclick="eliminarRegistro(${r.id})">Eliminar</button></td>
+      </tr>`;
+    });
+  }).catch(e => console.error(e));
+}
+
+function eliminarRegistro(id){
+  if(!confirm("Eliminar registro " + id + " ?")) return;
+  ReciLinkDB.eliminarRegistro(id).then(()=> {
+    cargarRegistros();
+    cargarStats();
+  }).catch(e => alert("Error: " + e));
+}
+
+function cargarStats(){
+  ReciLinkDB.calcularEstadisticas().then(s => {
+    document.getElementById("stats").innerText = `Kilos totales: ${s.totalKg} kg — PET: ${s.PET} kg — Aluminio: ${s.Aluminio} kg — Carton: ${s.Carton} kg — Total gastado: $${s.totalGasto}`;
+    const ctx = document.getElementById("chartAdmin");
+    if(window._chartAdmin) window._chartAdmin.destroy();
+    window._chartAdmin = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: ['PET','Aluminio','Carton'], datasets: [{ label: 'kg', data: [s.PET, s.Aluminio, s.Carton] }] }
+    });
+  }).catch(e => console.error(e));
+}
+
+function downloadCSV(){
+  ReciLinkDB.exportCSV().then(()=> alert("CSV descargado")).catch(e => alert("Error: " + e));
+}
+
+function vaciarDatosPrueba(){
+  if(!confirm("Borrar TODOS los registros?")) return;
+  ReciLinkDB.listarRegistros().then(regs => {
+    return Promise.all(regs.map(r => ReciLinkDB.eliminarRegistro(r.id)));
+  }).then(()=> {
+    alert("Registros borrados.");
+    cargarRegistros();
+    cargarStats();
+  }).catch(e => alert("Error: " + e));
+}
+
+function cerrarSesion(){ localStorage.removeItem("adminUser"); window.location="index.html"; }
+</script>
+</body>
+</html>

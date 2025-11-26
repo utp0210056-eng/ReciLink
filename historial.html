@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Historial - ReciLink</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="db.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="header">
+        <img src="img/Gemini_Generated_Image_5849qp5849qp5849.png" alt="logo" onerror="this.style.display='none'">
+        <h1>Historial de Reciclaje</h1>
+    </div>
+
+    <div class="container">
+        <div class="card row">
+            <div class="col">
+                <h3>Registrar reciclaje (rápido)</h3>
+                <label>Material</label>
+                <select id="regIdMaterial">
+                    <option>PET</option>
+                    <option>Aluminio</option>
+                    <option>Carton</option>
+                </select>
+                <label>Kilos</label>
+                <input id="regKilos" type="number" step="0.1" placeholder="Ej: 2.5">
+                <button onclick="registrarRec()">Registrar</button>
+                <p id="msgReg" class="small" style="color:#c0392b;"></p>
+            </div>
+
+            <div class="col">
+                <h3>Resumen rápido</h3>
+                <p id="totales" class="small"></p>
+                <button onclick="location.href='admin.html'">Ir al panel</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Mi historial</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Material</th>
+                        <th>Kilos</th>
+                        <th>Total$</th>
+                        <th>Fecha</th>
+                        <th>Nota</th>
+                    </tr>
+                </thead>
+                <tbody id="miHistorial"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Gráfica (kg por material)</h3>
+            <canvas id="graficaAlumno"></canvas>
+        </div>
+
+        <button onclick="location.href='index.html'">Volver</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            ReciLinkDB.openDB().then(() => {
+                cargarHistorial();
+            });
+        });
+
+        function registrarRec() {
+            const mat = document.getElementById("regIdMaterial").value;
+            const kilos = Number(document.getElementById("regKilos").value);
+            const msg = document.getElementById("msgReg");
+            msg.innerText = "";
+            ReciLinkDB.registrarReciclaje(mat, kilos, "").then(() => {
+                msg.innerText = "Registro creado (pendiente).";
+                document.getElementById("regKilos").value = "";
+                cargarHistorial();
+            }).catch(e => msg.innerText = "Error: " + e);
+        }
+
+        function cargarHistorial() {
+            ReciLinkDB.listarRegistros().then(lista => {
+                const tbody = document.getElementById("miHistorial");
+                tbody.innerHTML = "";
+                const totals = { PET: 0, Aluminio: 0, Carton: 0 };
+                lista.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                lista.forEach(r => {
+                    tbody.innerHTML += `<tr>
+        <td>${r.id}</td><td>${r.material}</td><td>${r.kilos}</td><td>${r.total}</td><td>${new Date(r.fecha).toLocaleString()}</td><td>${r.nota || ''}</td>
+      </tr>`;
+                    totals[r.material] = (totals[r.material] || 0) + Number(r.kilos);
+                });
+                document.getElementById("totales").innerText = `PET: ${totals.PET.toFixed(2)} kg — Aluminio: ${totals.Aluminio.toFixed(2)} kg — Carton: ${totals.Carton.toFixed(2)} kg`;
+
+                const ctx = document.getElementById("graficaAlumno");
+                if (window._grafAlumno) window._grafAlumno.destroy();
+                window._grafAlumno = new Chart(ctx, { type: 'pie', data: { labels: Object.keys(totals), datasets: [{ data: Object.values(totals) }] } });
+            });
+        }
+    </script>
+</body>
+
+</html>

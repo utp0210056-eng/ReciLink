@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ReciLink - Login</title>
+
+<!-- Estilos -->
+<link rel="stylesheet" href="styles.css">
+
+<!-- Base de datos -->
+<script src="db.js"></script>
+</head>
+<body>
+
+<!-- Encabezado -->
+<div class="header">
+    <img src="img/Gemini_Generated_Image_5849qp5849qp5849.png" alt="Logo" onerror="this.style.display='none'">
+    <h1>ReciLink - Recicladora</h1>
+</div>
+
+<!-- Contenedor principal -->
+<div class="container">
+    <div class="card">
+        <h2>Inicio de sesión (Administrador)</h2>
+
+        <p class="small">
+            Usuario: <strong>ReciLink</strong> |
+            Contraseña: <strong>ChalupasLocas24</strong>
+        </p>
+
+        <label>Usuario</label>
+        <input id="user" placeholder="Usuario (ej: ReciLink)">
+
+        <label>Contraseña</label>
+        <input id="pass" type="password" placeholder="Contraseña">
+
+        <button onclick="loginFormulario()">Entrar</button>
+
+        <p id="msg" class="small" style="color:#c0392b;"></p>
+    </div>
+
+    <p class="footer">Los datos se guardan localmente en tu navegador (IndexedDB).</p>
+</div>
+
+<!-- ========================================== -->
+<!-- SCRIPT DE LOGIN (FUNCIONA 100% CON db.js)  -->
+<!-- ========================================== -->
+<script>
+
+// Abrir BD al cargar la página
+document.addEventListener("DOMContentLoaded", async () => {
+    await DB.openDB().catch(e => console.error("Error abriendo BD:", e));
+});
+
+// Función de login del formulario
+async function loginFormulario() {
+    const u = document.getElementById("user").value.trim();
+    const p = document.getElementById("pass").value;
+    const msg = document.getElementById("msg");
+    msg.textContent = "";
+
+    try {
+        if (!u || !p)
+            throw new Error("Completa usuario y contraseña.");
+
+        await DB.openDB();
+
+        // VALIDACIÓN REAL (del db.js)
+        const ok = await validarAdmin(u, p);
+
+        if (!ok)
+            throw new Error("Credenciales inválidas.");
+
+        // Guardar sesión
+        localStorage.setItem("adminUser", u);
+
+        // Redireccionar
+        window.location = "admin.html";
+
+    } catch (err) {
+        msg.textContent = err.message;
+    }
+}
+
+</script>
+
+</body>
+</html>

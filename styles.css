@@ -1,0 +1,148 @@
+/* styles.css - estilos generales */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f3f6f4;
+    color: #123;
+}
+
+.header {
+    background: linear-gradient(90deg, #145a32, #1f7a45);
+    color: white;
+    padding: 18px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.header img {
+    width: 64px;
+    height: auto;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 18px auto;
+    padding: 12px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+label {
+    display: block;
+    margin-top: 8px;
+    font-weight: 600;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 6px;
+    border-radius: 8px;
+    border: 1px solid #d0d0d0;
+    font-size: 14px;
+}
+
+button {
+    background: #1f7a45;
+    color: white;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 12px;
+    font-weight: 700;
+}
+
+button.small {
+    padding: 6px 8px;
+    font-size: 13px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.table th {
+    background: #eaf2ef;
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.table td {
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.small {
+    font-size: 13px;
+    color: #666;
+}
+
+.status {
+    padding: 6px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    font-weight: 700;
+}
+
+.status.reg {
+    background: #fff3e0;
+    color: #c67c00;
+}
+
+.status.done {
+    background: #e9f9ef;
+    color: #0b8a3e;
+}
+
+.row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.col {
+    flex: 1;
+    min-width: 240px;
+}
+
+.footer {
+    text-align: center;
+    color: #666;
+    margin-top: 12px;
+    font-size: 13px;
+}
+
+@media (max-width:700px) {
+    .row {
+        flex-direction: column;
+    }
+
+    .header img {
+        width: 52px;
+    }
+}
